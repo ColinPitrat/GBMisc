@@ -1,18 +1,18 @@
 #include <gb/gb.h>
 #include <gb/cgb.h>
 
-// t = 00 (Transparent Blue), W = 01 (White), R = 10 (Red), B = 11 (Black)
+// t = 00 (Transparent Blue), W = 01 (White), Y = 10 (Yellow), B = 11 (Black)
 
 /*
 // Sprite 0: Ball (8 pixels diameter)
 unsigned char ball_tile_data[] = {
     0x3C, 0x3C,  // t t B B B B t t
-    0x66, 0x5A,  // t B W R R W B t
-    0xE7, 0x99,  // B W W R R W W B
-    0xC3, 0xBD,  // B W R R R R W B
-    0xC3, 0xBD,  // B W R R R R W B
-    0xE7, 0x99,  // B W W R R W W B
-    0x66, 0x5A,  // t B W R R W B t
+    0x66, 0x5A,  // t B W Y Y W B t
+    0xE7, 0x99,  // B W W Y Y W W B
+    0xC3, 0xBD,  // B W Y Y Y Y W B
+    0xC3, 0xBD,  // B W Y Y Y Y W B
+    0xE7, 0x99,  // B W W Y Y W W B
+    0x66, 0x5A,  // t B W Y Y W B t
     0x3C, 0x3C   // t t B B B B t t
 };
 */
@@ -21,10 +21,10 @@ unsigned char ball_tile_data[] = {
 unsigned char ball_tile_data[] = {
     0x00, 0x00,  // t t t t t t t t
     0x18, 0x18,  // t t t B B t t t
-    0x24, 0x3C,  // t t B W W B t t
-    0x42, 0x7E,  // t B W R R W B t
-    0x42, 0x7E,  // t B W R R W B t
-    0x24, 0x3C,  // t t B W W B t t
+    0x24, 0x3C,  // t t B Y Y B t t
+    0x42, 0x7E,  // t B Y Y Y Y B t
+    0x42, 0x7E,  // t B Y Y Y Y B t
+    0x24, 0x3C,  // t t B Y Y B t t
     0x18, 0x18,  // t t t B B t t t
     0x00, 0x00,  // t t t t t t t t
 };
@@ -100,7 +100,7 @@ const UWORD brick_palette[] = {
 const UWORD ball_palette[]     = {
     RGB8(0, 0, 0),       // Transparent
     RGB8(255, 255, 255), // White
-    RGB8(255, 0, 0),     // Red
+    RGB8(255, 255, 0),   // Yellow
     RGB8(0, 0, 0)        // Black
 };
 
