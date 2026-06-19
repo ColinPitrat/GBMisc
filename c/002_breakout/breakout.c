@@ -1,125 +1,58 @@
 #include <gb/gb.h>
 #include <gb/cgb.h>
 
+#include "ball.h"
+#include "brick.h"
+#include "racket.h"
+
+#include "audio.h"
+
 // t = 00 (Transparent Blue), W = 01 (White), Y = 10 (Yellow), B = 11 (Black)
-
-/*
-// Sprite 0: Ball (8 pixels diameter)
-unsigned char ball_tile_data[] = {
-    0x3C, 0x3C,  // t t B B B B t t
-    0x66, 0x5A,  // t B W Y Y W B t
-    0xE7, 0x99,  // B W W Y Y W W B
-    0xC3, 0xBD,  // B W Y Y Y Y W B
-    0xC3, 0xBD,  // B W Y Y Y Y W B
-    0xE7, 0x99,  // B W W Y Y W W B
-    0x66, 0x5A,  // t B W Y Y W B t
-    0x3C, 0x3C   // t t B B B B t t
-};
-*/
-
-// Sprite 0: Ball (6 pixels diameter)
-unsigned char ball_tile_data[] = {
-    0x00, 0x00,  // t t t t t t t t
-    0x18, 0x18,  // t t t B B t t t
-    0x24, 0x3C,  // t t B Y Y B t t
-    0x42, 0x7E,  // t B Y Y Y Y B t
-    0x42, 0x7E,  // t B Y Y Y Y B t
-    0x24, 0x3C,  // t t B Y Y B t t
-    0x18, 0x18,  // t t t B B t t t
-    0x00, 0x00,  // t t t t t t t t
-};
-
 uint8_t ball_radius = 3;
-
-// Sprite 1: Racket left side
-unsigned char racket_left_data[] = {
-    0x1F, 0x1F,  // t t t B B B B B
-    0x3F, 0x3F,  // t t B B B B B B
-    0x3F, 0x30,  // t t B B G G G G
-    0x3F, 0x30,  // t t B B G G G G
-    0x3F, 0x3F,  // t t B B B B B B
-    0x3F, 0x3F,  // t t B B B B B B
-    0x00, 0x00,  // t t t t t t t t
-    0x00, 0x00   // t t t t t t t t
-};
-
-/*
-// Sprite 2: Racket middle
-unsigned char racket_middle_data[] = {
-    0xFF, 0xFF,
-    0xFF, 0xFF,
-    0xFF, 0xFF,
-    0xFF, 0xFF,
-    0xFF, 0xFF,
-    0xFF, 0xFF,
-    0, 0,
-    0, 0
-};
-*/
-
-// Sprite 3: Racket right side
-unsigned char racket_right_data[] = {
-    0xF8, 0xF8,  // B B B B B t t t
-    0xFC, 0xFC,  // B B B B B B t t
-    0xFC, 0x0C,  // G G G G B B t t
-    0xFC, 0x0C,  // G G G G B B t t
-    0xFC, 0xFC,  // B B B B B B t t
-    0xFC, 0xFC,  // B B B B B B t t
-    0x00, 0x00,  // t t t t t t t t
-    0x00, 0x00   // t t t t t t t t
-};
-
-unsigned char brick_tile_data[] = {
-    0x01, 0x01,  // Shiny line
-    0x01, 0x7F,  // Shiny left line, dark right line
-    0x01, 0x7F,
-    0x01, 0x7F,
-    0x01, 0x7F,
-    0x01, 0x7F,
-    0x01, 0x7F,
-    0xFF, 0xFF   // Dark bottom line
-};
-
-unsigned char blank_tile_data[] = {
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
+// 0 = blank tile
+// 1 = left of brick
+// 2 = right of brick
+uint8_t brick_offset = 1;
 
 // Palettes
 const UWORD background_palette[] = {
     RGB8(0, 0, 128),     // Dark blue
 };
 
-const UWORD brick_palette[] = {
-    RGB8(255, 60, 60),   // Bright red
-    RGB8(0, 0, 0),       // Unused
-    RGB8(220, 40, 40),   // Brick red
-    RGB8(110, 40, 40)    // Dark red
-};
-
-const UWORD ball_palette[]     = {
-    RGB8(0, 0, 0),       // Transparent
-    RGB8(255, 255, 255), // White
-    RGB8(255, 255, 0),   // Yellow
-    RGB8(0, 0, 0)        // Black
-};
-
-const UWORD racket_palette[]     = {
-    RGB8(0, 0, 0),       // Transparent
-    RGB8(180, 180, 186), // Gray
-    RGB8(255, 0, 0),     // Red
-    RGB8(0, 0, 0)        // Black
-};
-
 #define BRICK_ROWS 4
-#define BRICK_COLS 20
+#define BRICK_COLS 10
 uint8_t bricks[BRICK_ROWS][BRICK_COLS];
 
-unsigned char brick_id[1] = {4};
-unsigned char brick_palette_id[1] = {1};
+unsigned char brick_palette_id[2] = {1, 1};
 
-unsigned char background_id[1] = {5};
-unsigned char background_palette_id[1] = {0};
+unsigned char background_id[2] = {0, 0};
+unsigned char background_palette_id[2] = {0, 0};
+
+// Starting parameter definitions
+#define START_BALL_X   80
+#define START_BALL_Y   80
+#define START_RACKET_X 72
+#define START_RACKET_Y 144
+#define START_BALL_DX  1
+#define START_BALL_DY  1
+#define START_DELAY    25
+
+// Runtime state variables globally tracked.
+// This is dirty but this makes it easier to deduplicate logic in reset_play_state.
+uint8_t ball_x, ball_y;
+int8_t ball_dx, ball_dy;
+uint8_t racket_x, racket_y;
+uint8_t wait;
+
+void reset_play_state(void) {
+    ball_x = START_BALL_X;
+    ball_y = START_BALL_Y;
+    ball_dx = START_BALL_DX;
+    ball_dy = START_BALL_DY;
+    racket_x = START_RACKET_X;
+    racket_y = START_RACKET_Y;
+    wait = START_DELAY;
+}
 
 void init_bricks(void) {
     uint8_t r, c;
@@ -129,9 +62,10 @@ void init_bricks(void) {
             // Draw brick tile (ID 4) onto the background map
             // Note: We shift down by 2 rows (r + 2) to leave room at the absolute top
             VBK_REG = VBK_BANK_0;
-            set_bkg_tiles(c, r + 2, 1, 1, brick_id);
+            // Note: this is a 2x1 block of tiles.
+            set_bkg_based_tiles(2*c, r + 2, 2, 1, brick_map, brick_offset);
             VBK_REG = VBK_BANK_1;
-            set_bkg_tiles(c, r + 2, 1, 1, brick_palette_id);
+            set_bkg_tiles(2*c, r + 2, 2, 1, brick_palette_id);
             VBK_REG = VBK_BANK_0;
         }
     }
@@ -143,21 +77,21 @@ void init_sound(void) {
     NR51_REG = 0xFF; // Route all 4 channels to both left and right speakers
 }
 
-void play_racket_sound(void) {
-    // Channel 1: square wave tone sweep
-    NR10_REG = 0x16; // Sweep register: sweep time, increase/decrease, shift
-    NR11_REG = 0x40; // Wave duty cycle (25%) and sound length
-    NR12_REG = 0x73; // Volume envelope: initial volume, fade direction, sweep step
-    NR13_REG = 0x00; // Frequency low bits
-    NR14_REG = 0xC6; // Frequency high bits + initialize trigger playback flag
+void ball_movement(void) {
+  ball_x += ball_dx;
+  ball_y += ball_dy;
 }
 
-void play_brick_sound(void) {
-    // Channel 4: White noise (explosion/crash effect)
-    NR41_REG = 0x1F; // Sound length
-    NR42_REG = 0xF1; // Envelope: high volume initial spike, fast volume fade drop
-    NR43_REG = 0x30; // Clock shift frequency divider ratio for white noise texturing
-    NR44_REG = 0x80; // Initialize trigger playback flag
+uint8_t check_victory_condition(void) {
+    uint8_t r, c;
+    for (r = 0; r < BRICK_ROWS; r++) {
+        for (c = 0; c < BRICK_COLS; c++) {
+            if (bricks[r][c] == 1) {
+                return 0; // Found a brick that's still standing
+            }
+        }
+    }
+    return 1; // All bricks are cleared!
 }
 
 void main(void) {
@@ -166,18 +100,16 @@ void main(void) {
     init_sound();
 
     set_bkg_palette(0, 1, background_palette);
-    set_bkg_palette(1, 1, brick_palette);
-    set_sprite_palette(0, 1, ball_palette);
-    set_sprite_palette(1, 1, racket_palette);
+    set_bkg_palette(1, 2, brick_palettes);
+    set_sprite_palette(0, 1, ball_palettes);
+    set_sprite_palette(1, 1, racket_palettes);
 
     // Load Background Asset Data (Slots 4 and 5)
-    set_bkg_data(4, 1, brick_tile_data);
-    set_bkg_data(5, 1, blank_tile_data);
+    set_bkg_data(brick_map[0]+brick_offset, brick_TILE_COUNT, brick_tiles);
 
     // Load the 3 needed asset blocks into memory
-    set_sprite_data(0, 1, ball_tile_data);
-    set_sprite_data(1, 1, racket_left_data);
-    set_sprite_data(2, 1, racket_right_data);
+    set_sprite_data(0, 1, ball_tiles);
+    set_sprite_data(1, 2, racket_tiles);
 
     // Link Hardware IDs to tile maps
     set_sprite_tile(0, 0); // Ball
@@ -192,22 +124,14 @@ void main(void) {
     // Build the grid map on startup
     init_bricks();
 
-    // Starting parameters
-    uint8_t start_ball_x = 80;   uint8_t start_ball_y = 80;
-    uint8_t start_racket_x = 72; uint8_t start_racket_y = 144;
-    int8_t start_ball_dx = 1;    int8_t start_ball_dy = 1;
-    uint8_t start_delay = 25;
-
-    // Initialization (ideally we'd share that with the "lost life" part that just does exactly the same thing).
-    uint8_t ball_x = start_ball_x;     uint8_t ball_y = start_ball_y;
-    int8_t ball_dx = start_ball_dx;    int8_t ball_dy = start_ball_dy;
-    uint8_t racket_x = start_racket_x; uint8_t racket_y = start_racket_y; 
-    uint8_t wait = start_delay;
+    reset_play_state();
 
     SHOW_BKG;
     SHOW_SPRITES;
 
     while(1) {
+        update_background_music();
+
         // Input scanning
         uint8_t input = joypad();
         if (input & J_LEFT) {
@@ -217,20 +141,16 @@ void main(void) {
             if (racket_x < 152) { racket_x += 2; } // 168 max screen - 16 wide racket
         }
 
-        if (wait > 0) {
-          wait--;
-        }
+        if (wait > 0) wait--;
         if (wait == 0) {
-          // Ball movement
-          ball_x += ball_dx;
-          ball_y += ball_dy;
+          ball_movement();
         }
 
         // Sidewall and ceiling impacts
         if (ball_x <= 8 || ball_x >= 160) { ball_dx *= -1; }
         if (ball_y <= 16) { ball_dy *= -1; }
 
-        // Checks if falling ball falls within the racket
+        // Checks if ball falls within the racket
         if (ball_x + ball_radius >= racket_x && ball_x <= (racket_x + 16 - ball_radius)) {
           if (ball_dy > 0 && ball_y == (racket_y - 2*ball_radius) ) {
             // Bouncing on the top.
@@ -246,37 +166,69 @@ void main(void) {
 
         // Bottom screen boundary
         if (ball_y >= 160) {
-            // TODO: lose a life
-            ball_x = start_ball_x;     ball_y = start_ball_y;
-            ball_dx = start_ball_dx;   ball_dy = start_ball_dy;
-            racket_x = start_racket_x; racket_y = start_racket_y; 
-            wait = start_delay;
+            reset_play_state();
+            //play_lose_sound();
+            play_win_sound();
         }
 
         // Bricks - ball collisions.
-        // Hardware coordinate conversion: Divide pixel locations by 8 to identify grid block index
-        uint8_t tile_x = (ball_x - 8) / 8;
-        uint8_t tile_y = (ball_y - 16) / 8;
+        // Hardware rendering shifts: Background starts at X=0, Y=0. Sprites add X+8, Y+16.
+        uint8_t ball_center_x = ball_x - 8 + ball_radius;
+        uint8_t ball_center_y = ball_y - 16 + ball_radius;
+
+        // Position to brick mapping.
+        uint8_t brick_x = ball_center_x / 16;
+        uint8_t brick_y = ball_center_y / 8;
 
         // Check if the ball is within the bounding vertical row boundaries of the grid layout
-        if (tile_y >= 2 && tile_y < (2 + BRICK_ROWS) && tile_x < BRICK_COLS) {
-            uint8_t brick_row = tile_y - 2;
+        if (brick_y >= 2 && brick_y < (2 + BRICK_ROWS)) {
+            uint8_t brick_row = brick_y - 2;
 
             // Check if a live target is hit at these precise layout indexes
-            if (bricks[brick_row][tile_x] == 1) {
-                bricks[brick_row][tile_x] = 0; // Destroy brick index flag
+            if (bricks[brick_row][brick_x] == 1) {
+                bricks[brick_row][brick_x] = 0; // Destroy brick index flag
 
                 VBK_REG = VBK_BANK_0;
                 // Replace the physical visual asset slot on screen with the blank blue space tile (ID 5)
-                set_bkg_tiles(tile_x, tile_y, 1, 1, background_id);
+                // Note: this is a 2x1 block of tiles.
+                set_bkg_tiles(2*brick_x, brick_y, 2, 1, background_id);
                 VBK_REG = VBK_BANK_1;
-                set_bkg_tiles(tile_x, tile_y, 1, 1, background_palette_id);
+                set_bkg_tiles(2*brick_x, brick_y, 2, 1, background_palette_id);
                 VBK_REG = VBK_BANK_0; // Always drop back to Bank 0 for s
 
                 play_brick_sound();
 
-                // TODO: different mechanic if hitting the brick on the side - support hitting the brick from the top.
-                ball_dy *= -1; // Deflect the ball back along the vertical path axis
+                if (check_victory_condition() == 1) {
+                    play_win_sound();
+                    delay(1000);
+                    init_bricks();      // Rebuild the wall
+                    reset_play_state(); // Reset positions
+                }
+
+                // Deflection decision:
+                //  - reverse vertical direction on horizontal brick boundary
+                //  - reverse horizontal direction on vertical brick boundary
+                // Deciding which one we hit is based on whether we passed the
+                // boundary in the last ball movement. This means we can reverse
+                // both if hitting close to the corner.
+                uint8_t brick_left   = brick_x * 16;
+                uint8_t brick_right  = brick_left + 16;
+                uint8_t brick_top    = brick_y * 8;
+                uint8_t brick_bottom = brick_top + 8;
+
+                uint8_t hit_vertical = (ball_dx > 0) ?
+                  (ball_center_x - ball_dx) < brick_left && ball_center_x >= brick_left :
+                  (ball_center_x - ball_dx) >= brick_right && ball_center_x < brick_right;
+                uint8_t hit_horizontal = (ball_dy > 0) ?
+                  (ball_center_y - ball_dy) < brick_top && ball_center_y >= brick_top :
+                  (ball_center_y - ball_dy) >= brick_bottom && ball_center_y < brick_bottom;
+
+                if (hit_vertical) {
+                    ball_dx *= -1; // Side wall collision
+                }
+                if (hit_horizontal) {
+                    ball_dy *= -1; // Horizontal surface impact
+                }
             }
         }
 
